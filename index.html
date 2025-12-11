@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Research Paper Chatbot</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0f172a, #1e293b);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 900px;
+      background: #ffffff;
+      border-radius: 18px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+      overflow: hidden;
+      display: grid;
+      grid-template-rows: auto auto 1fr auto;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    header {
+      padding: 20px 25px;
+      background: linear-gradient(120deg, #3b82f6, #6366f1);
+      color: #fff;
+      border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+
+    header h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+    }
+
+    header p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-top: 4px;
+    }
+
+    /* Upload Bar */
+    .top-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 18px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .file-input-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: #fff;
+      border: 1px dashed #94a3b8;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: 0.2s ease;
+      font-size: 0.85rem;
+    }
+
+    .file-input-label:hover {
+      border-color: #6366f1;
+      background: #eef2ff;
+    }
+
+    #pdfFile {
+      display: none;
+    }
+
+    .upload-btn {
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: #4f46e5;
+      border: none;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 0.85rem;
+      transition: 0.15s ease;
+    }
+
+    .upload-btn:hover {
+      background: #4338ca;
+    }
+
+    #status {
+      margin-left: auto;
+      font-size: 0.8rem;
+      color: #475569;
+    }
+
+    /* Chat Window */
+    #chat {
+      padding: 20px;
+      background: #f1f5f9;
+      height: 450px;
+      overflow-y: auto;
+    }
+
+    .message-row {
+      margin-bottom: 14px;
+      display: flex;
+    }
+
+    .msg-user {
+      margin-left: auto;
+      max-width: 70%;
+      padding: 10px 14px;
+      background: #4f46e5;
+      color: #fff;
+      border-radius: 14px 14px 4px 14px;
+      font-size: 0.95rem;
+      box-shadow: 0 3px 10px rgba(79,70,229,0.4);
+    }
+
+    .msg-bot {
+      margin-right: auto;
+      max-width: 75%;
+      padding: 10px 14px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px 14px 14px 4px;
+      font-size: 0.95rem;
+      color: #111827;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.12);
+    }
+
+    /* Input Bar */
+    .input-bar {
+      display: flex;
+      gap: 10px;
+      padding: 14px 18px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+    }
+
+    #message {
+      flex-grow: 1;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid #cbd5e1;
+      font-size: 1rem;
+      outline: none;
+      transition: 0.2s ease;
+    }
+
+    #message:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 2px #c7d2fe;
+    }
+
+    .send-btn {
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: #3b82f6;
+      border: none;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.15s ease;
+    }
+
+    .send-btn:hover {
+      background: #2563eb;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-container">
+
+    <header>
+      <h1>Research Paper Chatbot</h1>
+      <p>Upload a PDF and start asking questions instantly.</p>
+    </header>
+
+    <!-- Upload Bar -->
+    <div class="top-bar">
+      <label class="file-input-label">
+        Select PDF
+        <input type="file" id="pdfFile" accept="application/pdf" />
+      </label>
+      <button class="upload-btn" id="uploadBtn">Upload</button>
+      <div id="status"></div>
+    </div>
+
+    <!-- Chat Window -->
+    <div id="chat"></div>
+
+    <!-- Input Box -->
+    <div class="input-bar">
+      <input type="text" id="message" placeholder="Ask about the paper..." />
+      <button class="send-btn" id="sendBtn">Send</button>
+    </div>
+
+  </div>
+
+
+<script>
+const apiBase = "http://localhost:8000";
+
+document.getElementById("uploadBtn").onclick = async () => {
+  const fileInput = document.getElementById("pdfFile");
+  if (!fileInput.files.length) return alert("Please select a PDF");
+
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+
+  document.getElementById("status").innerText = "Uploading…";
+
+  const res = await fetch(apiBase + "/upload_pdf", {
+    method: "POST",
+    body: formData
+  });
+
+  const data = await res.json();
+  document.getElementById("status").innerText = "Ready ✔ " + data.filename;
+};
+
+function addMessage(text, sender) {
+  const chat = document.getElementById("chat");
+  const row = document.createElement("div");
+  row.className = "message-row";
+
+  const bubble = document.createElement("div");
+  bubble.className = sender === "user" ? "msg-user" : "msg-bot";
+  bubble.innerText = text;
+
+  row.appendChild(bubble);
+  chat.appendChild(row);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+document.getElementById("sendBtn").onclick = async () => {
+  const msgInput = document.getElementById("message");
+  const text = msgInput.value.trim();
+  if (!text) return;
+
+  addMessage(text, "user");
+  msgInput.value = "";
+
+  const res = await fetch(apiBase + "/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: text })
+  });
+
+  const data = await res.json();
+  addMessage(data.answer, "bot");
+};
+</script>
+
+</body>
+</html>
